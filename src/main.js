@@ -274,4 +274,4 @@ if (virtualDevice.cooler) {
   });
 }
 
-exports.result = virtualDevice;
+export default virtualDevice;
