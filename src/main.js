@@ -157,11 +157,11 @@ VirtualDevice.prototype.getHumidityAmbient = function() {
 };
 
 VirtualDevice.prototype.getTemperatureAmbient = function() {
-  return thermometer.getTemperatureAmbient();
+  return sensor.getTemperatureAmbient();
 };
 
 VirtualDevice.prototype.getTemperatureUnit = function() {
-  var unit = thermometer.getTemperatureUnit();
+  var unit = sensor.getTemperatureUnit();
   if (unit) {
     scriptConfiguration.putString('thermometerUnitLastSeen', unit);
     return unit;
@@ -256,7 +256,7 @@ VirtualDevice.prototype.manageEvent = function(on, ing) {
 var virtualDevice = new VirtualDevice();
 
 // register to listen for temperature change events
-thermometer.on('Thermometer', function() {
+sensor.on('Thermometer', function() {
   virtualDevice.updateState();
 });
 
