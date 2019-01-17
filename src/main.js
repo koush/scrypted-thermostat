@@ -28,7 +28,7 @@ VirtualDevice.prototype.updateState = function() {
 
   // this holds the last known state of the thermostat.
   // ie, what it decided to do, the last time it updated its state.
-  var thermostatState = scriptConfiguration.getString('thermostatState');
+  var thermostatState = scriptSettings.getString('thermostatState');
 
   // set the state before turning any devices on or off.
   // on/off events will need to be resolved by looking at the state to
@@ -40,7 +40,7 @@ VirtualDevice.prototype.updateState = function() {
     }
 
     log.i('Thermostat state changed. ' + state);
-    scriptConfiguration.putString('thermostatState', state);
+    scriptSettings.putString('thermostatState', state);
   }
 
   function manageSetpoint(temperatureDifference, er, other, ing, ed) {
@@ -153,7 +153,7 @@ VirtualDevice.prototype.updateState = function() {
 // implementation of TemperatureSetting
 
 VirtualDevice.prototype.getHumidityAmbient = function() {
-  return humidity.getHumidityAmbient();
+  return sensor.getHumidityAmbient();
 };
 
 VirtualDevice.prototype.getTemperatureAmbient = function() {
@@ -163,27 +163,27 @@ VirtualDevice.prototype.getTemperatureAmbient = function() {
 VirtualDevice.prototype.getTemperatureUnit = function() {
   var unit = sensor.getTemperatureUnit();
   if (unit) {
-    scriptConfiguration.putString('thermometerUnitLastSeen', unit);
+    scriptSettings.putString('thermometerUnitLastSeen', unit);
     return unit;
   }
 
-  return scriptConfiguration.getString('thermometerUnitLastSeen');
+  return scriptSettings.getString('thermometerUnitLastSeen');
 }
 
 VirtualDevice.prototype.getTemperatureSetpoint = function() {
-  return scriptConfiguration.getDouble("thermostatTemperatureSetpoint");
+  return scriptSettings.getDouble("thermostatTemperatureSetpoint") || this.getTemperatureAmbient();
 }
 
 VirtualDevice.prototype.getTemperatureSetpointHigh = function() {
-  return scriptConfiguration.getDouble("thermostatTemperatureSetpointHigh");
+  return scriptSettings.getDouble("thermostatTemperatureSetpointHigh") || this.getTemperatureAmbient();
 };
 
 VirtualDevice.prototype.getTemperatureSetpointLow = function() {
-  return scriptConfiguration.getDouble("thermostatTemperatureSetpointLow");
+  return scriptSettings.getDouble("thermostatTemperatureSetpointLow") || this.getTemperatureAmbient();
 };
 
 VirtualDevice.prototype.getThermostatMode = function() {
-  return scriptConfiguration.getString("thermostatMode");
+  return scriptSettings.getString("thermostatMode") || 'Off';
 };
 
 VirtualDevice.prototype.getAvailableThermostatModes = function() {
@@ -205,26 +205,26 @@ VirtualDevice.prototype.getAvailableThermostatModes = function() {
 
 VirtualDevice.prototype.setTemperatureSetpoint = function(arg0) {
   log.i('thermostatTemperatureSetpoint changed ' + arg0);
-  scriptConfiguration.putDouble("thermostatTemperatureSetpoint", arg0);
+  scriptSettings.putDouble("thermostatTemperatureSetpoint", arg0);
   this.updateState();
 };
 
 VirtualDevice.prototype.setTemperatureSetRange = function(low, high) {
   log.i('thermostatTemperatureSetpointRange changed ' + low + ' ' + high);
-  scriptConfiguration.putDouble("thermostatTemperatureSetpointLow", low);
-  scriptConfiguration.putDouble("thermostatTemperatureSetpointHigh", high);
+  scriptSettings.putDouble("thermostatTemperatureSetpointLow", low);
+  scriptSettings.putDouble("thermostatTemperatureSetpointHigh", high);
   this.updateState();
 };
 
 VirtualDevice.prototype.setThermostatMode = function(mode) {
   log.i('thermostat mode set to ' + mode);
   if (mode == 'On') {
-    mode = scriptConfiguration.getString("lastThermostatMode");
+    mode = scriptSettings.getString("lastThermostatMode");
   }
   else if (mode != 'Off') {
-    scriptConfiguration.putString("lastThermostatMode", mode);
+    scriptSettings.putString("lastThermostatMode", mode);
   }
-  scriptConfiguration.putString("thermostatMode", mode);
+  scriptSettings.putString("thermostatMode", mode);
   this.updateState();
 };
 
@@ -235,7 +235,7 @@ VirtualDevice.prototype.setThermostatMode = function(mode) {
 // before any devices are turned on or off (as mentioned above) to avoid race
 // conditions.
 VirtualDevice.prototype.manageEvent = function(on, ing) {
-  var state = scriptConfiguration.getString('thermostatState');
+  var state = scriptSettings.getString('thermostatState');
   if (on) {
     // on implies it must be heating/cooling
     if (state != ing) {
