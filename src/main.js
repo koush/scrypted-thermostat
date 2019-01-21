@@ -253,7 +253,27 @@ VirtualDevice.prototype.manageEvent = function(on, ing) {
   }
 };
 
+
 var virtualDevice = new VirtualDevice();
+
+const NoSensorVariable = 'Setup Incomplete: Assign a thermometer and humidity sensor to the "sensor" variable.';
+const NoHeaterCoolerVariable = 'Setup Incomplete: Assign an OnOff device to the "heater" and/or "cooler" OnOff variables.';
+
+try {
+  if (!sensor)
+    throw new Error();
+}
+catch {
+  log.a(NoSensorVariable);
+  throw new Error(NoSensorVariable);
+}
+log.clearAlert(NoSensorVariable);
+
+if (!virtualDevice.heater && !virtualDevice.cooler) {
+  log.a(NoHeaterCoolerVariable);
+  throw new Error(NoHeaterCoolerVariable);
+}
+log.clearAlert(NoHeaterCoolerVariable);
 
 // register to listen for temperature change events
 sensor.on('Thermometer', function() {
