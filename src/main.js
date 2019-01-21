@@ -256,24 +256,24 @@ VirtualDevice.prototype.manageEvent = function(on, ing) {
 
 var virtualDevice = new VirtualDevice();
 
-const NoSensorVariable = 'Setup Incomplete: Assign a thermometer and humidity sensor to the "sensor" variable.';
-const NoHeaterCoolerVariable = 'Setup Incomplete: Assign an OnOff device to the "heater" and/or "cooler" OnOff variables.';
+function alertAndThrow(msg) {
+  log.a(msg);
+  throw new Error(msg);
+}
 
 try {
   if (!sensor)
     throw new Error();
 }
 catch {
-  log.a(NoSensorVariable);
-  throw new Error(NoSensorVariable);
+  alertAndThrow('Setup Incomplete: Assign a thermometer and humidity sensor to the "sensor" variable.');
 }
-log.clearAlert(NoSensorVariable);
+log.clearAlerts();
 
 if (!virtualDevice.heater && !virtualDevice.cooler) {
-  log.a(NoHeaterCoolerVariable);
-  throw new Error(NoHeaterCoolerVariable);
+  alertAndThrow('Setup Incomplete: Assign an OnOff device to the "heater" and/or "cooler" OnOff variables.');
 }
-log.clearAlert(NoHeaterCoolerVariable);
+log.clearAlerts();
 
 // register to listen for temperature change events
 sensor.on('Thermometer', function() {
