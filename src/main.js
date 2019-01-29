@@ -50,32 +50,38 @@ VirtualDevice.prototype.updateState = function() {
     }
 
     // turn off the other one. if heating, turn off cooler. if cooling, turn off heater.
-    if (other) {
+    if (other && other.isOn()) {
       other.turnOff();
     }
 
     if (temperatureDifference < 0) {
       setState(ed);
-      er.turnOff();
+      if (er.isOn()) {
+        er.turnOff();
+      }
       return;
     }
 
     // start cooling/heating if way over threshold, or if it is not in the cooling/heating state
     if (temperatureDifference > threshold || thermostatState != ing) {
       setState(ing);
-      er.turnOn();
+      if (!er.isOn()) {
+        er.turnOn();
+      }
       return;
     }
 
     setState(ed);
-    er.turnOff();
+    if (er.isOn()) {
+      er.turnOff();
+    }
   }
 
   function allOff() {
-    if (heater) {
+    if (heater && heater.isOn()) {
       heater.turnOff();
     }
-    if (cooler) {
+    if (cooler && cooler.isOn()) {
       cooler.turnOff();
     }
   }
