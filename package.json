@@ -20,16 +20,21 @@
    ],
    "scrypted": {
       "variables": {
-         "sensor": ["Thermometer", "Humidity"],
+         "sensor": [
+            "Thermometer",
+            "Humidity"
+         ],
          "heater": "OnOff",
          "cooler": "OnOff"
       },
       "name": "Virtual Thermostat",
-      "interfaces": ["TemperatureSetting"],
+      "interfaces": [
+         "TemperatureSetting"
+      ],
       "type": "Device"
    },
    "devDependencies": {
-      "scrypted-deploy": "^1.3.2"
+      "scrypted-deploy": "^1.3.4"
    },
    "dependencies": {}
 }
