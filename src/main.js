@@ -1,4 +1,4 @@
-function VirtualDevice() {
+function ThermostatDevice() {
   // determine what is available. undefined stuff will throw;
   try {
     this.heater = heater;
@@ -13,7 +13,7 @@ function VirtualDevice() {
 }
 
 // whenever the temperature changes, or a new command is sent, this updates the current state accordingly.
-VirtualDevice.prototype.updateState = function() {
+ThermostatDevice.prototype.updateState = function() {
   var heater = this.heater;
   var cooler = this.cooler;
 
@@ -158,15 +158,15 @@ VirtualDevice.prototype.updateState = function() {
 
 // implementation of TemperatureSetting
 
-VirtualDevice.prototype.getHumidityAmbient = function() {
+ThermostatDevice.prototype.getHumidityAmbient = function() {
   return sensor.getHumidityAmbient();
 };
 
-VirtualDevice.prototype.getTemperatureAmbient = function() {
+ThermostatDevice.prototype.getTemperatureAmbient = function() {
   return sensor.getTemperatureAmbient();
 };
 
-VirtualDevice.prototype.getTemperatureUnit = function() {
+ThermostatDevice.prototype.getTemperatureUnit = function() {
   var unit = sensor.getTemperatureUnit();
   if (unit) {
     scriptSettings.putString('thermometerUnitLastSeen', unit);
@@ -176,23 +176,23 @@ VirtualDevice.prototype.getTemperatureUnit = function() {
   return scriptSettings.getString('thermometerUnitLastSeen');
 }
 
-VirtualDevice.prototype.getTemperatureSetpoint = function() {
+ThermostatDevice.prototype.getTemperatureSetpoint = function() {
   return scriptSettings.getDouble("thermostatTemperatureSetpoint") || this.getTemperatureAmbient();
 }
 
-VirtualDevice.prototype.getTemperatureSetpointHigh = function() {
+ThermostatDevice.prototype.getTemperatureSetpointHigh = function() {
   return scriptSettings.getDouble("thermostatTemperatureSetpointHigh") || this.getTemperatureAmbient();
 };
 
-VirtualDevice.prototype.getTemperatureSetpointLow = function() {
+ThermostatDevice.prototype.getTemperatureSetpointLow = function() {
   return scriptSettings.getDouble("thermostatTemperatureSetpointLow") || this.getTemperatureAmbient();
 };
 
-VirtualDevice.prototype.getThermostatMode = function() {
+ThermostatDevice.prototype.getThermostatMode = function() {
   return scriptSettings.getString("thermostatMode") || 'Off';
 };
 
-VirtualDevice.prototype.getAvailableThermostatModes = function() {
+ThermostatDevice.prototype.getAvailableThermostatModes = function() {
   var modes = [];
   modes.push('Off')
   if (this.cooler) {
@@ -209,20 +209,20 @@ VirtualDevice.prototype.getAvailableThermostatModes = function() {
   return modes;
 };
 
-VirtualDevice.prototype.setTemperatureSetpoint = function(arg0) {
+ThermostatDevice.prototype.setTemperatureSetpoint = function(arg0) {
   log.i('thermostatTemperatureSetpoint changed ' + arg0);
   scriptSettings.putDouble("thermostatTemperatureSetpoint", arg0);
   this.updateState();
 };
 
-VirtualDevice.prototype.setTemperatureSetRange = function(low, high) {
+ThermostatDevice.prototype.setTemperatureSetRange = function(low, high) {
   log.i('thermostatTemperatureSetpointRange changed ' + low + ' ' + high);
   scriptSettings.putDouble("thermostatTemperatureSetpointLow", low);
   scriptSettings.putDouble("thermostatTemperatureSetpointHigh", high);
   this.updateState();
 };
 
-VirtualDevice.prototype.setThermostatMode = function(mode) {
+ThermostatDevice.prototype.setThermostatMode = function(mode) {
   log.i('thermostat mode set to ' + mode);
   if (mode == 'On') {
     mode = scriptSettings.getString("lastThermostatMode");
@@ -240,7 +240,7 @@ VirtualDevice.prototype.setThermostatMode = function(mode) {
 // make this resolve with the current state. This relies on the state being set
 // before any devices are turned on or off (as mentioned above) to avoid race
 // conditions.
-VirtualDevice.prototype.manageEvent = function(on, ing) {
+ThermostatDevice.prototype.manageEvent = function(on, ing) {
   var state = scriptSettings.getString('thermostatState');
   if (on) {
     // on implies it must be heating/cooling
@@ -260,7 +260,7 @@ VirtualDevice.prototype.manageEvent = function(on, ing) {
 };
 
 
-var virtualDevice = new VirtualDevice();
+var ThermostatDevice = new ThermostatDevice();
 
 function alertAndThrow(msg) {
   log.a(msg);
@@ -276,28 +276,29 @@ catch {
 }
 log.clearAlerts();
 
-if (!virtualDevice.heater && !virtualDevice.cooler) {
+if (!ThermostatDevice.heater && !ThermostatDevice.cooler) {
   alertAndThrow('Setup Incomplete: Assign an OnOff device to the "heater" and/or "cooler" OnOff variables.');
 }
 log.clearAlerts();
 
 // register to listen for temperature change events
-sensor.on('Thermometer', function() {
-  virtualDevice.updateState();
+sensor.on('Thermometer', function(source, event, data) {
+  log.i('temperature event: ' + data);
+  ThermostatDevice.updateState();
 });
 
 // Watch for on/off events, some of them may be physical
 // button presses, and those will need to be resolved by
 // checking the state versus the event.
-if (virtualDevice.heater) {
-  virtualDevice.heater.on('OnOff', function(source, on) {
-    virtualDevice.manageEvent(on, 'Heating');
+if (ThermostatDevice.heater) {
+  ThermostatDevice.heater.on('OnOff', function(source, event, on) {
+    ThermostatDevice.manageEvent(on, 'Heating');
   });
 }
-if (virtualDevice.cooler) {
-  virtualDevice.cooler.on('OnOff', function(source, on) {
-    virtualDevice.manageEvent(on, 'Cooling');
+if (ThermostatDevice.cooler) {
+  ThermostatDevice.cooler.on('OnOff', function(source, event, on) {
+    ThermostatDevice.manageEvent(on, 'Cooling');
   });
 }
 
-export default virtualDevice;
+export default ThermostatDevice;

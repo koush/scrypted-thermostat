@@ -1,6 +1,6 @@
 {
    "name": "@scrypted/thermostat",
-   "version": "0.0.9",
+   "version": "0.0.10",
    "description": "Create a virtual thermostat from a temperature sensor and smart plug connected to heater or AC unit.",
    "author": "Scrypted",
    "license": "Apache",
@@ -34,7 +34,7 @@
       "type": "Device"
    },
    "devDependencies": {
-      "@scrypted/sdk": "0.0.2"
+      "@scrypted/sdk": "0.0.10"
    },
    "dependencies": {}
 }
