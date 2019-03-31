@@ -1,4 +1,9 @@
+import sdk from '@scrypted/sdk';
+const { deviceManager, log } = sdk;
+
 function ThermostatDevice() {
+  this.state = deviceManager.getDeviceState();
+
   // determine what is available. undefined stuff will throw;
   try {
     this.heater = heater;
@@ -10,6 +15,19 @@ function ThermostatDevice() {
   }
   catch (e) {
   }
+
+  var safeCopyProperty = function(property) {
+    try {
+      this.state[property] = sensor[property];
+    }
+    catch(e) {
+    }
+  }.bind(this);
+
+  // copy the current state from the sensor.
+  safeCopyProperty('temperature');
+  safeCopyProperty('temperatureUnit');
+  safeCopyProperty('humidity');
 }
 
 // whenever the temperature changes, or a new command is sent, this updates the current state accordingly.
@@ -50,13 +68,13 @@ ThermostatDevice.prototype.updateState = function() {
     }
 
     // turn off the other one. if heating, turn off cooler. if cooling, turn off heater.
-    if (other && other.isOn()) {
+    if (other && other.on) {
       other.turnOff();
     }
 
     if (temperatureDifference < 0) {
       setState(ed);
-      if (er.isOn()) {
+      if (er.on) {
         er.turnOff();
       }
       return;
@@ -65,23 +83,23 @@ ThermostatDevice.prototype.updateState = function() {
     // start cooling/heating if way over threshold, or if it is not in the cooling/heating state
     if (temperatureDifference > threshold || thermostatState != ing) {
       setState(ing);
-      if (!er.isOn()) {
+      if (!er.on) {
         er.turnOn();
       }
       return;
     }
 
     setState(ed);
-    if (er.isOn()) {
+    if (er.on) {
       er.turnOff();
     }
   }
 
   function allOff() {
-    if (heater && heater.isOn()) {
+    if (heater && heater.on) {
       heater.turnOff();
     }
-    if (cooler && cooler.isOn()) {
+    if (cooler && cooler.on) {
       cooler.turnOff();
     }
   }
@@ -260,7 +278,7 @@ ThermostatDevice.prototype.manageEvent = function(on, ing) {
 };
 
 
-var ThermostatDevice = new ThermostatDevice();
+var thermostatDevice = new ThermostatDevice();
 
 function alertAndThrow(msg) {
   log.a(msg);
@@ -276,29 +294,37 @@ catch {
 }
 log.clearAlerts();
 
-if (!ThermostatDevice.heater && !ThermostatDevice.cooler) {
+if (!thermostatDevice.heater && !thermostatDevice.cooler) {
   alertAndThrow('Setup Incomplete: Assign an OnOff device to the "heater" and/or "cooler" OnOff variables.');
 }
 log.clearAlerts();
 
 // register to listen for temperature change events
-sensor.on('Thermometer', function(source, event, data) {
-  log.i('temperature event: ' + data);
-  ThermostatDevice.updateState();
+sensor.listen('Thermometer', function(source, event, data) {
+  thermostatDevice.state[event.property] = data;
+  if (event.property == 'temperature') {
+    log.i('temperature event: ' + data);
+    thermostatDevice.updateState();
+  }
+});
+
+// listen to humidity events too, and pass those along
+sensor.listen('HumiditySensor', function(source, event, data) {
+  thermostatDevice.state[event.property] = data;
 });
 
 // Watch for on/off events, some of them may be physical
 // button presses, and those will need to be resolved by
 // checking the state versus the event.
-if (ThermostatDevice.heater) {
-  ThermostatDevice.heater.on('OnOff', function(source, event, on) {
-    ThermostatDevice.manageEvent(on, 'Heating');
+if (thermostatDevice.heater) {
+  thermostatDevice.heater.listen('OnOff', function(source, event, on) {
+    thermostatDevice.manageEvent(on, 'Heating');
   });
 }
-if (ThermostatDevice.cooler) {
-  ThermostatDevice.cooler.on('OnOff', function(source, event, on) {
-    ThermostatDevice.manageEvent(on, 'Cooling');
+if (thermostatDevice.cooler) {
+  thermostatDevice.cooler.listen('OnOff', function(source, event, on) {
+    thermostatDevice.manageEvent(on, 'Cooling');
   });
 }
 
-export default ThermostatDevice;
+export default thermostatDevice;

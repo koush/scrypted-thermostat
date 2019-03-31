@@ -31,10 +31,13 @@
       "interfaces": [
          "TemperatureSetting"
       ],
+      "events": [
+         "TemperatureSetting"
+      ],
       "type": "Device"
    },
    "devDependencies": {
-      "@scrypted/sdk": "0.0.10"
+      "@scrypted/sdk": "0.0.16"
    },
    "dependencies": {}
 }
