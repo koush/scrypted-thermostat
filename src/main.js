@@ -46,7 +46,7 @@ ThermostatDevice.prototype.updateState = function() {
 
   // this holds the last known state of the thermostat.
   // ie, what it decided to do, the last time it updated its state.
-  var thermostatState = scriptSettings.getString('thermostatState');
+  var thermostatState = localStorage.getItem('thermostatState');
 
   // set the state before turning any devices on or off.
   // on/off events will need to be resolved by looking at the state to
@@ -58,7 +58,7 @@ ThermostatDevice.prototype.updateState = function() {
     }
 
     log.i('Thermostat state changed. ' + state);
-    scriptSettings.putString('thermostatState', state);
+    localStorage.setItem('thermostatState', state);
   }
 
   function manageSetpoint(temperatureDifference, er, other, ing, ed) {
@@ -187,27 +187,27 @@ ThermostatDevice.prototype.getTemperatureAmbient = function() {
 ThermostatDevice.prototype.getTemperatureUnit = function() {
   var unit = sensor.getTemperatureUnit();
   if (unit) {
-    scriptSettings.putString('thermometerUnitLastSeen', unit);
+    localStorage.setItem('thermometerUnitLastSeen', unit);
     return unit;
   }
 
-  return scriptSettings.getString('thermometerUnitLastSeen');
+  return localStorage.getItem('thermometerUnitLastSeen');
 }
 
 ThermostatDevice.prototype.getTemperatureSetpoint = function() {
-  return scriptSettings.getDouble("thermostatTemperatureSetpoint") || this.getTemperatureAmbient();
+  return parseFloat(localStorage.getItem("thermostatTemperatureSetpoint")) || this.getTemperatureAmbient();
 }
 
 ThermostatDevice.prototype.getTemperatureSetpointHigh = function() {
-  return scriptSettings.getDouble("thermostatTemperatureSetpointHigh") || this.getTemperatureAmbient();
+  return parseFloat(localStorage.getItem("thermostatTemperatureSetpointHigh")) || this.getTemperatureAmbient();
 };
 
 ThermostatDevice.prototype.getTemperatureSetpointLow = function() {
-  return scriptSettings.getDouble("thermostatTemperatureSetpointLow") || this.getTemperatureAmbient();
+  return parseFloat(localStorage.getItem("thermostatTemperatureSetpointLow")) || this.getTemperatureAmbient();
 };
 
 ThermostatDevice.prototype.getThermostatMode = function() {
-  return scriptSettings.getString("thermostatMode") || 'Off';
+  return localStorage.getItem("thermostatMode") || 'Off';
 };
 
 ThermostatDevice.prototype.getAvailableThermostatModes = function() {
@@ -229,26 +229,26 @@ ThermostatDevice.prototype.getAvailableThermostatModes = function() {
 
 ThermostatDevice.prototype.setTemperatureSetpoint = function(arg0) {
   log.i('thermostatTemperatureSetpoint changed ' + arg0);
-  scriptSettings.putDouble("thermostatTemperatureSetpoint", arg0);
+  localStorage.setItem("thermostatTemperatureSetpoint", arg0);
   this.updateState();
 };
 
 ThermostatDevice.prototype.setTemperatureSetRange = function(low, high) {
   log.i('thermostatTemperatureSetpointRange changed ' + low + ' ' + high);
-  scriptSettings.putDouble("thermostatTemperatureSetpointLow", low);
-  scriptSettings.putDouble("thermostatTemperatureSetpointHigh", high);
+  localStorage.setItem("thermostatTemperatureSetpointLow", low);
+  localStorage.setItem("thermostatTemperatureSetpointHigh", high);
   this.updateState();
 };
 
 ThermostatDevice.prototype.setThermostatMode = function(mode) {
   log.i('thermostat mode set to ' + mode);
   if (mode == 'On') {
-    mode = scriptSettings.getString("lastThermostatMode");
+    mode = localStorage.getItem("lastThermostatMode");
   }
   else if (mode != 'Off') {
-    scriptSettings.putString("lastThermostatMode", mode);
+    localStorage.setItem("lastThermostatMode", mode);
   }
-  scriptSettings.putString("thermostatMode", mode);
+  localStorage.setItem("thermostatMode", mode);
   this.updateState();
 };
 
@@ -259,7 +259,7 @@ ThermostatDevice.prototype.setThermostatMode = function(mode) {
 // before any devices are turned on or off (as mentioned above) to avoid race
 // conditions.
 ThermostatDevice.prototype.manageEvent = function(on, ing) {
-  var state = scriptSettings.getString('thermostatState');
+  var state = localStorage.getItem('thermostatState');
   if (on) {
     // on implies it must be heating/cooling
     if (state != ing) {
