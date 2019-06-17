@@ -24,10 +24,53 @@ function ThermostatDevice() {
     }
   }.bind(this);
 
+  var maybeCopyTemperature = function(property) {
+    try {
+      if (!this.state[property]) {
+        this.state[property] = sensor.temperature;
+      }
+    }
+    catch(e) {
+    }
+  }.bind(this);
+
   // copy the current state from the sensor.
   safeCopyProperty('temperature');
-  safeCopyProperty('temperatureUnit');
+  var unit;
+  if (unit = localStorage.getItem('temperatureUnit')) {
+    this.state.temperatureUnit = unit === 'F' ? 'F' : 'C';
+  }
+  else {
+    log.a('Please specify temperatureUnit C or F in Script Settings.');
+    safeCopyProperty('temperatureUnit');
+  }
   safeCopyProperty('humidity');
+
+  maybeCopyTemperature('thermostatSetpoint');
+  maybeCopyTemperature('thermostatSetpointLow');
+  maybeCopyTemperature('thermostatSetpointHigh');
+
+  var modes = [];
+  modes.push('Off')
+  if (this.cooler) {
+    modes.push('Cool');
+  }
+  if (this.heater) {
+    modes.push('Heat');
+  }
+  if (this.heater && this.cooler) {
+    modes.push('HeatCool');
+  }
+  modes.push('On');
+  this.state.thermostatAvailableModes = modes;
+
+  try {
+    if (!this.state.thermostatMode) {
+      this.state.thermostatMode = 'Off';
+    }
+  }
+  catch (e) {
+  }
 }
 
 // whenever the temperature changes, or a new command is sent, this updates the current state accordingly.
@@ -37,7 +80,7 @@ ThermostatDevice.prototype.updateState = function() {
 
   var threshold = 2;
 
-  var thermostatMode = this.getThermostatMode();
+  var thermostatMode = this.state.thermostatMode || 'Off';
 
   if (!thermostatMode) {
     log.e('thermostat mode not set');
@@ -111,43 +154,43 @@ ThermostatDevice.prototype.updateState = function() {
 
   } else if (thermostatMode == 'Cool') {
     
-    var thermostatSetpoint = this.getTemperatureSetpoint();
+    var thermostatSetpoint = this.state.thermostatSetpoint || sensor.temperature;
     if (!thermostatSetpoint) {
       log.e('No thermostat setpoint is defined.');
       return;
     }
 
-    var temperatureDifference = this.getTemperatureAmbient() - thermostatSetpoint;
+    var temperatureDifference = sensor.temperature - thermostatSetpoint;
     manageSetpoint(temperatureDifference, cooler, heater, 'Cooling', 'Cooled');
     return;
 
   } else if (thermostatMode == 'Heat') {
 
-    var thermostatSetpoint = this.getTemperatureSetpoint()
+    var thermostatSetpoint = this.state.thermostatSetpoint || sensor.temperature;
     if (!thermostatSetpoint) {
       log.e('No thermostat setpoint is defined.');
       return;
     }
 
-    var temperatureDifference = thermostatSetpoint - this.getTemperatureAmbient();
+    var temperatureDifference = thermostatSetpoint - sensor.temperature;
     manageSetpoint(temperatureDifference, heater, cooler, 'Heating', 'Heated');
     return;
 
   } else if (thermostatMode == 'HeatCool') {
 
-    var temperatureAmbient = this.getTemperatureAmbient();
-    var temperatureSetpointLow = this.getTemperatureSetpointLow();
-    var temperatureSetpointHigh = this.getTemperatureSetpointHigh();
+    var temperature = sensor.temperature;
+    var thermostatSetpointLow = this.state.thermostatSetpointLow || sensor.temperature;
+    var thermostatSetpointHigh = this.state.thermostatSetpointHigh || sensor.temperature;
 
-    if (!temperatureSetpointLow || !temperatureSetpointHigh) {
+    if (!thermostatSetpointLow || !thermostatSetpointHigh) {
       log.e('No thermostat setpoint low/high is defined.');
       return;
     }
 
     // see if this is within HeatCool tolerance. This prevents immediately cooling after heating all the way to the high setpoint.
     if ((thermostatState == 'HeatCooled' || thermostatState == 'Heated' || thermostatState == 'Cooled')
-      && temperatureAmbient > temperatureSetpointLow - threshold
-      && temperatureAmbient < temperatureSetpointHigh + threshold) {
+      && temperature > thermostatSetpointLow - threshold
+      && temperature < thermostatSetpointHigh + threshold) {
       // normalize the state into HeatCooled
       setState('HeatCooled');
       allOff();
@@ -155,12 +198,12 @@ ThermostatDevice.prototype.updateState = function() {
     }
 
     // if already heating or cooling or way out of tolerance, continue doing it until state changes.
-    if (temperatureAmbient < temperatureSetpointLow || thermostatState == 'Heating') {
-      var temperatureDifference = thermostatSetpointHigh - temperatureAmbient;
+    if (temperature < thermostatSetpointLow || thermostatState == 'Heating') {
+      var temperatureDifference = thermostatSetpointHigh - temperature;
       manageSetpoint(temperatureDifference, heater, 'Heating', 'Heated');
       return;
-    } else if (temperatureAmbient > temperatureSetpointHigh || thermostatState == 'Cooling') {
-      var temperatureDifference = temperatureAmbient - thermostatSetpointLow;
+    } else if (temperature > thermostatSetpointHigh || thermostatState == 'Cooling') {
+      var temperatureDifference = temperature - thermostatSetpointLow;
       manageSetpoint(temperatureDifference, cooler, 'Cooling', 'Cooled');
       return;
     }
@@ -176,67 +219,21 @@ ThermostatDevice.prototype.updateState = function() {
 
 // implementation of TemperatureSetting
 
-ThermostatDevice.prototype.getHumidityAmbient = function() {
-  return sensor.getHumidityAmbient();
-};
-
-ThermostatDevice.prototype.getTemperatureAmbient = function() {
-  return sensor.getTemperatureAmbient();
-};
-
-ThermostatDevice.prototype.getTemperatureUnit = function() {
-  var unit = sensor.getTemperatureUnit();
-  if (unit) {
-    localStorage.setItem('thermometerUnitLastSeen', unit);
-    return unit;
-  }
-
-  return localStorage.getItem('thermometerUnitLastSeen');
-}
-
-ThermostatDevice.prototype.getTemperatureSetpoint = function() {
-  return parseFloat(localStorage.getItem("thermostatTemperatureSetpoint")) || this.getTemperatureAmbient();
-}
-
-ThermostatDevice.prototype.getTemperatureSetpointHigh = function() {
-  return parseFloat(localStorage.getItem("thermostatTemperatureSetpointHigh")) || this.getTemperatureAmbient();
-};
-
-ThermostatDevice.prototype.getTemperatureSetpointLow = function() {
-  return parseFloat(localStorage.getItem("thermostatTemperatureSetpointLow")) || this.getTemperatureAmbient();
-};
-
-ThermostatDevice.prototype.getThermostatMode = function() {
-  return localStorage.getItem("thermostatMode") || 'Off';
-};
-
-ThermostatDevice.prototype.getAvailableThermostatModes = function() {
-  var modes = [];
-  modes.push('Off')
-  if (this.cooler) {
-    modes.push('Cool');
-  }
-  if (this.heater) {
-    modes.push('Heat');
-  }
-  if (this.heater && this.cooler) {
-    modes.push('HeatCool');
-  }
-  modes.push('On');
-
-  return modes;
-};
-
-ThermostatDevice.prototype.setTemperatureSetpoint = function(arg0) {
-  log.i('thermostatTemperatureSetpoint changed ' + arg0);
-  localStorage.setItem("thermostatTemperatureSetpoint", arg0);
+ThermostatDevice.prototype.setThermostatSetpoint = function(thermostatSetpoint) {
+  log.i('thermostatSetpoint changed ' + thermostatSetpoint);
+  this.state.thermostatSetpoint = thermostatSetpoint;
   this.updateState();
 };
 
-ThermostatDevice.prototype.setTemperatureSetRange = function(low, high) {
-  log.i('thermostatTemperatureSetpointRange changed ' + low + ' ' + high);
-  localStorage.setItem("thermostatTemperatureSetpointLow", low);
-  localStorage.setItem("thermostatTemperatureSetpointHigh", high);
+ThermostatDevice.prototype.setThermostatSetpointLow = function(thermostatSetpointLow) {
+  log.i('thermostatSetpointLow changed ' + thermostatSetpointLow);
+  this.state.thermostatSetpointLow = thermostatSetpointLow;
+  this.updateState();
+};
+
+ThermostatDevice.prototype.setThermostatSetpointHigh = function(thermostatSetpointHigh) {
+  log.i('thermostatSetpointHigh changed ' + thermostatSetpointHigh);
+  this.state.thermostatSetpointHigh = thermostatSetpointHigh;
   this.updateState();
 };
 
@@ -248,7 +245,7 @@ ThermostatDevice.prototype.setThermostatMode = function(mode) {
   else if (mode != 'Off') {
     localStorage.setItem("lastThermostatMode", mode);
   }
-  localStorage.setItem("thermostatMode", mode);
+  this.state.thermostatMode = mode;
   this.updateState();
 };
 
