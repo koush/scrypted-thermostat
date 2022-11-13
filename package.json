@@ -37,7 +37,7 @@
       "type": "Device"
    },
    "devDependencies": {
-      "@scrypted/sdk": "0.0.59"
+      "@scrypted/sdk": "0.2.10"
    },
    "dependencies": {}
 }
